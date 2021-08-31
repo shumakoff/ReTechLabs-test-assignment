@@ -20,4 +20,4 @@ class StoreItems(models.Model):
     qty = models.IntegerField()
 
     def __str__(self):
-            return 'Items at %s' % self.parent.title
+            return '%s of %s in %s' % (self.qty, self.item, self.parent.title)
