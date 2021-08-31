@@ -1,5 +1,9 @@
+from datetime import date
+from django.db.models import Sum
+from django.db.models.functions import Coalesce
 from rest_framework import serializers
 from main.models import Item, Store, StoreItems
+from accounting.models import SalesLog, SupplyLog
 
 
 class ItemSerializer(serializers.ModelSerializer):
@@ -51,7 +55,11 @@ class BuyingListSerializer(serializers.ListSerializer):
             # whole order going to fail if one of the product_id availibility
             # is less than ordered amount
             store = Store.objects.get(id=store_id )
-            qty_avail = store.storeitems_set.get(item__id=product_id).qty
+            #qty_avail = store.storeitems_set.get(item__id=product_id).qty
+            supplied = SupplyLog.objects.filter(date__lte=date.today(), item_id=product_id, store=store).aggregate(supplied=Coalesce(Sum('qty'), 0))
+            sold = SalesLog.objects.filter(date__lte=date.today(), item_id=product_id, store=store).aggregate(sold=Coalesce(Sum('qty'), 0))
+            print(supplied)
+            qty_avail = supplied['supplied'] - sold['sold']
             if qty_avail < qty_req:
                 raise serializers.ValidationError('There is not enough quantity \
                         for item {0}. Qty requested is {1} \
@@ -62,7 +70,7 @@ class BuyingListSerializer(serializers.ListSerializer):
 
 class BuyingSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
-    count = serializers.IntegerField()
+    count = serializers.IntegerField(min_value=1)
 
     class Meta:
         list_serializer_class = BuyingListSerializer
@@ -70,7 +78,7 @@ class BuyingSerializer(serializers.Serializer):
 
 class AddingSerializer(serializers.Serializer):
     product_id = serializers.IntegerField()
-    count = serializers.IntegerField()
+    count = serializers.IntegerField(min_value=1)
 
 
     def validate_product_id(self, value):
