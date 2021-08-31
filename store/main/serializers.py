@@ -2,14 +2,20 @@ from rest_framework import serializers
 from main.models import Item, Store, StoreItems
 
 
+class ItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Item
+        fields = '__all__'
+
+
 class StoreSerializer(serializers.ModelSerializer):
     class Meta:
         model = Store
         fields = '__all__'
 
 
-
 class StoreItemsSerializer(serializers.ModelSerializer):
+    item = ItemSerializer()
     class Meta:
         model = StoreItems
         fields = '__all__'
@@ -42,10 +48,10 @@ class BuyingListSerializer(serializers.ListSerializer):
                 raise serializers.ValidationError('Requested item id not found')
 
             # check if we have enough at the specific store warehouse
-            # whole order going to fail if one of the product_id is less
-            # than ordered amount
+            # whole order going to fail if one of the product_id availibility
+            # is less than ordered amount
             store = Store.objects.get(id=store_id )
-            qty_avail = store.storeitems_set.get(id=product_id).qty
+            qty_avail = store.storeitems_set.get(item__id=product_id).qty
             if qty_avail < qty_req:
                 raise serializers.ValidationError('There is not enough quantity \
                         for item {0}. Qty requested is {1} \

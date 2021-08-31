@@ -1,3 +1,4 @@
+from datetime import date
 from django.shortcuts import render, get_object_or_404
 from django.core import serializers
 from django.db import transaction
@@ -8,6 +9,7 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.decorators import action, api_view
 from main.models import Item, Store, StoreItems
+from accounting.models import SupplyLog, SalesLog
 from main.serializers import StoreSerializer, StoreItemsSerializer, BuyingSerializer, AddingSerializer
 
 
@@ -24,7 +26,8 @@ class StoreViewSet(viewsets.ViewSet):
 
     def retrieve(self, request, pk=None):
         store = Store.objects.get(id=pk)
-        warehouse = store.storeitems_set.all()
+        # all the goods that are in stock
+        warehouse = store.storeitems_set.all().filter(qty__gt=0)
         serializer = StoreItemsSerializer(warehouse, many=True)
         return Response(serializer.data)
 
@@ -62,6 +65,8 @@ class StoreViewSet(viewsets.ViewSet):
 
 
 def buy_item(store, item, qty):
+    new_entry = SalesLog(date=date.today(), store=store, item=item, qty=qty)
+    new_entry.save()
     store_item = store.storeitems_set.select_for_update().get(item=item)
     with transaction.atomic():
         store_item.qty -= qty
@@ -69,7 +74,13 @@ def buy_item(store, item, qty):
 
 
 def add_item(store, item, qty):
-    store_item = store.storeitems_set.select_for_update().get(item=item)
-    with transaction.atomic():
-        store_item.qty += qty
+    new_entry = SupplyLog(date=date.today(), store=store, item=item, qty=qty)
+    new_entry.save()
+    try:
+        store_item = store.storeitems_set.get(item=item)
+    except StoreItems.DoesNotExist:
+        store_item = StoreItems(parent=store, item=item, qty=qty)
         store_item.save()
+        return
+    store_item.qty += qty
+    store_item.save()
