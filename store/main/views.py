@@ -67,20 +67,8 @@ class StoreViewSet(viewsets.ViewSet):
 def buy_item(store, item, qty):
     new_entry = SalesLog(date=date.today(), store=store, item=item, qty=qty)
     new_entry.save()
-    store_item = store.storeitems_set.select_for_update().get(item=item)
-    with transaction.atomic():
-        store_item.qty -= qty
-        store_item.save()
 
 
 def add_item(store, item, qty):
     new_entry = SupplyLog(date=date.today(), store=store, item=item, qty=qty)
     new_entry.save()
-    try:
-        store_item = store.storeitems_set.get(item=item)
-    except StoreItems.DoesNotExist:
-        store_item = StoreItems(parent=store, item=item, qty=qty)
-        store_item.save()
-        return
-    store_item.qty += qty
-    store_item.save()

@@ -58,7 +58,6 @@ class BuyingListSerializer(serializers.ListSerializer):
             #qty_avail = store.storeitems_set.get(item__id=product_id).qty
             supplied = SupplyLog.objects.filter(date__lte=date.today(), item_id=product_id, store=store).aggregate(supplied=Coalesce(Sum('qty'), 0))
             sold = SalesLog.objects.filter(date__lte=date.today(), item_id=product_id, store=store).aggregate(sold=Coalesce(Sum('qty'), 0))
-            print(supplied)
             qty_avail = supplied['supplied'] - sold['sold']
             if qty_avail < qty_req:
                 raise serializers.ValidationError('There is not enough quantity \
