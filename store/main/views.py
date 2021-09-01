@@ -1,14 +1,10 @@
 from datetime import date
-from django.shortcuts import render, get_object_or_404
-from django.core import serializers
-from django.db import transaction
+from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
-from rest_framework import permissions
-from rest_framework import generics
 from rest_framework import status
 from rest_framework.response import Response
-from rest_framework.decorators import action, api_view
-from main.models import Item, Store, StoreItems
+from rest_framework.decorators import action
+from main.models import Item, Store
 from accounting.models import SupplyLog, SalesLog
 from main.serializers import StoreSerializer, StoreItemsSerializer, BuyingSerializer, AddingSerializer
 
@@ -19,12 +15,19 @@ class StoreViewSet(viewsets.ViewSet):
     """
 
     def list(self, request):
+        """
+        Shows list of stores
+        """
         queryset = Store.objects.all()
         serializer = StoreSerializer(queryset, context={'request': request}, many=True)
         return Response(serializer.data)
 
 
     def retrieve(self, request, pk=None):
+        """
+        Shows info about the store
+        and what's in store
+        """
         store = Store.objects.get(id=pk)
         # all the goods that are in stock
         warehouse = store.storeitems_set.all().filter(qty__gt=0)
@@ -43,9 +46,8 @@ class StoreViewSet(viewsets.ViewSet):
                 item = Item.objects.get(id=entry['product_id'])
                 buy_item(store, item, entry['count'])
             return Response({'status': 'transaction successful'})
-        else:
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors,
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
     @action(detail=True,
@@ -59,16 +61,21 @@ class StoreViewSet(viewsets.ViewSet):
                 item = Item.objects.get(id=entry['product_id'])
                 add_item(store, item, entry['count'])
             return Response({'status': 'transaction successful'})
-        else:
-            return Response(serializer.errors,
-                            status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors,
+                        status=status.HTTP_400_BAD_REQUEST)
 
 
 def buy_item(store, item, qty):
+    """
+    Make new entry in sales table
+    """
     new_entry = SalesLog(date=date.today(), store=store, item=item, qty=qty)
     new_entry.save()
 
 
 def add_item(store, item, qty):
+    """
+    Make new entry in supply table
+    """
     new_entry = SupplyLog(date=date.today(), store=store, item=item, qty=qty)
     new_entry.save()

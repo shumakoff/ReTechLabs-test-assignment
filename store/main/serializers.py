@@ -7,18 +7,28 @@ from accounting.models import SalesLog, SupplyLog
 
 
 class ItemSerializer(serializers.ModelSerializer):
+    """
+    Model Item serializer
+    """
     class Meta:
         model = Item
         fields = '__all__'
 
 
 class StoreSerializer(serializers.ModelSerializer):
+    """
+    Model Store serializer
+    """
     class Meta:
         model = Store
         fields = '__all__'
 
 
 class StoreItemsSerializer(serializers.ModelSerializer):
+    """
+    Model StoreItem serializer
+    Not used
+    """
     item = ItemSerializer()
     class Meta:
         model = StoreItems
@@ -26,6 +36,10 @@ class StoreItemsSerializer(serializers.ModelSerializer):
 
 
 class BuyingListSerializer(serializers.ListSerializer):
+    """
+    Custom ListSerializer.
+    Basically to check for non unique product_id
+    """
 
 
     def validate(self, data):
@@ -68,6 +82,9 @@ class BuyingListSerializer(serializers.ListSerializer):
 
 
 class BuyingSerializer(serializers.Serializer):
+    """
+    Serializer for processing buy requests
+    """
     product_id = serializers.IntegerField()
     count = serializers.IntegerField(min_value=1)
 
@@ -76,6 +93,9 @@ class BuyingSerializer(serializers.Serializer):
 
 
 class AddingSerializer(serializers.Serializer):
+    """
+    Serializer for processing add requests
+    """
     product_id = serializers.IntegerField()
     count = serializers.IntegerField(min_value=1)
 
@@ -85,7 +105,7 @@ class AddingSerializer(serializers.Serializer):
         Check if we have this product_id in our nomenclature.
         """
         try:
-            item = Item.objects.get(id=value)
+            Item.objects.get(id=value)
             return value
         except Item.DoesNotExist:
             raise serializers.ValidationError('Can\'t add non existent product_id')
