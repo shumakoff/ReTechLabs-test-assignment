@@ -1,4 +1,6 @@
 from datetime import date
+from django.db.models.functions import Coalesce
+from django.db.models import Sum
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
 from rest_framework import status
@@ -28,10 +30,31 @@ class StoreViewSet(viewsets.ViewSet):
         Shows info about the store
         and what's in store
         """
-        store = Store.objects.get(id=pk)
+        store = get_object_or_404(Store.objects.all(), id=pk)
         # all the goods that are in stock
-        warehouse = store.storeitems_set.all().filter(qty__gt=0)
-        serializer = StoreItemsSerializer(warehouse, many=True)
+        warehouse = {'store_id': store.id,
+                'store_title': store.title,
+                'store_items': []}
+        items_in_store = SupplyLog.objects.filter(
+                date__lte=date.today(),
+                store=store).distinct('item')
+        for item in items_in_store:
+            item_qty_supplied = SupplyLog.objects.filter(
+                    date__lte=date.today(),
+                    store=store,
+                    item_id=item.item.id).aggregate(amount=Coalesce(Sum('qty'), 0))
+            item_qty_sold = SalesLog.objects.filter(
+                    date__lte=date.today(),
+                    store=store,
+                    item_id=item.item.id).aggregate(amount=Coalesce(Sum('qty'), 0))
+            item_qty_available = item_qty_supplied['amount'] - item_qty_sold['amount']
+            if (item_qty_available) >= 1:
+                warehouse['store_items'].append(
+                        {'item_id': item.id,
+                            'qty': item_qty_available,
+                            'item_title': item.item.title})
+        serializer = StoreItemsSerializer(data=warehouse)
+        serializer.is_valid()
         return Response(serializer.data)
 
 

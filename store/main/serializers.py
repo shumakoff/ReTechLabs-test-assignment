@@ -6,13 +6,6 @@ from main.models import Item, Store, StoreItems
 from accounting.models import SalesLog, SupplyLog
 
 
-class ItemSerializer(serializers.ModelSerializer):
-    """
-    Model Item serializer
-    """
-    class Meta:
-        model = Item
-        fields = '__all__'
 
 
 class StoreSerializer(serializers.ModelSerializer):
@@ -24,15 +17,22 @@ class StoreSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
-class StoreItemsSerializer(serializers.ModelSerializer):
+class ItemSerializer(serializers.Serializer):
     """
-    Model StoreItem serializer
-    Not used
+    Item serializer for store view
     """
-    item = ItemSerializer()
-    class Meta:
-        model = StoreItems
-        fields = '__all__'
+    item_id = serializers.IntegerField()
+    item_title = serializers.CharField()
+    qty = serializers.IntegerField()
+
+
+class StoreItemsSerializer(serializers.Serializer):
+    """
+    StoreViewSet.retrieve serializer
+    """
+    store_id = serializers.IntegerField()
+    store_title = serializers.CharField()
+    store_items = ItemSerializer()
 
 
 class BuyingListSerializer(serializers.ListSerializer):
